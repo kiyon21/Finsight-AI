@@ -16,6 +16,14 @@ import {
   IconButton,
 } from '@chakra-ui/react'
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons'
+import { auth, googleProvider } from '../firebase/firebase'
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  signInWithPopup
+} from "firebase/auth";
+import { useNavigate } from 'react-router-dom';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true)
@@ -23,17 +31,43 @@ const Auth = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const toast = useToast()
+  const navigate = useNavigate();
+
+
+  // handles creating account
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      toast({
+        title: 'Account Created!',
+        description: 'Please log in to continue to Finsight AI!',
+        status: 'info',
+        duration: 3000,
+        isClosable: true,
+      })
+    }
+    catch (err:any) {
+      console.error(err.message)
+    }
+
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     // TODO: Implement authentication logic
-    toast({
-      title: 'Coming soon',
-      description: 'Authentication will be implemented soon!',
-      status: 'info',
-      duration: 3000,
-      isClosable: true,
-    })
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: 'Log In Successful!',
+        status: 'info',
+        duration: 3000,
+        isClosable: true,
+      })
+      navigate('/home')
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   const handleGoogleSignIn = () => {
@@ -54,7 +88,7 @@ const Auth = () => {
           {isLogin ? 'Welcome Back' : 'Create Account'}
         </Heading>
         <Box w="100%" p={8} borderWidth={1} borderRadius="lg" boxShadow="lg">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={isLogin ? handleSubmit : handleCreateAccount}>
             <VStack spacing={4}>
               <FormControl isRequired>
                 <FormLabel>Email</FormLabel>
