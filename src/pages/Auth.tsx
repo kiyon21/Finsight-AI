@@ -24,12 +24,16 @@ import {
   signInWithPopup
 } from "firebase/auth";
 import { useNavigate } from 'react-router-dom';
+import { doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const toast = useToast()
   const navigate = useNavigate();
 
@@ -38,16 +42,47 @@ const Auth = () => {
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      toast({
-        title: 'Account Created!',
-        description: 'Please log in to continue to Finsight AI!',
-        status: 'info',
-        duration: 3000,
-        isClosable: true,
-      })
+      // check if password and confirm password match
+      if (password !== confirmPassword) {
+        toast({
+          title: 'Passwords do not match',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        })
+        return
+      }
+      // create user with email and password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // add user to firestore
+      try{
+        await addDoc(collection(db, 'users'), {
+          uid: user.uid,
+          email: email,
+          hasCompletedOnboarding: false,
+          createdAt: new Date().toISOString(),
+        })
+        // show toast message
+        toast({
+          title: 'Account Created!',
+          description: 'Please log in to continue to Finsight AI',
+          status: 'info',
+          duration: 3000,
+          isClosable: true,
+        })
+      } catch (err:any) {
+        console.log('error adding user to firestore');
+        console.error(err.message);
+      }
+
+      // login user
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/onboarding');
     }
     catch (err:any) {
+      console.log('error creating user');
       console.error(err.message)
     }
 
@@ -57,16 +92,31 @@ const Auth = () => {
     e.preventDefault()
     // TODO: Implement authentication logic
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // sign in with email and password
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      // show toast message
       toast({
         title: 'Log In Successful!',
         status: 'info',
         duration: 3000,
         isClosable: true,
       })
-      navigate('/home')
-    } catch (err) {
-      console.error(err)
+      const q = query(collection(db, 'users'), where('uid', '==', user.uid));
+      const querySnapshot = await getDocs(q);
+      let hasCompletedOnboarding = false;
+      if(!querySnapshot.empty){
+        const userData = querySnapshot.docs[0].data();
+        hasCompletedOnboarding = userData.hasCompletedOnboarding;
+      }
+      if(hasCompletedOnboarding){
+        navigate('/home');
+      } else {
+        navigate('/onboarding');
+      }
+    } catch (err:any) {
+      console.log('error signing in');
+      console.error(err.message);
     }
   }
 
@@ -117,7 +167,28 @@ const Auth = () => {
                     />
                   </InputRightElement>
                 </InputGroup>
-              </FormControl>
+                </FormControl>
+                {!isLogin && (
+                <FormControl isRequired>
+                  <FormLabel>Confirm Password</FormLabel>
+                <InputGroup>
+                  <Input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                  />
+                  <InputRightElement>
+                    <IconButton
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      icon={showConfirmPassword ? <ViewOffIcon /> : <ViewIcon />}
+                      variant="ghost"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    />
+                  </InputRightElement>
+                </InputGroup>
+                </FormControl>
+                )}
               <Button
                 type="submit"
                 colorScheme="blue"

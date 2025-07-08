@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 import Home from "../pages/Home";
 import Auth from "../pages/Auth";
 import LandingPage from "../pages/LandingPage";
+import Onboarding from "../pages/Onboarding";
 
 export default function AppRoutes() {
   const { loading } = useAuth();
@@ -30,6 +31,14 @@ export default function AppRoutes() {
             element={
               <PrivateRoute>
                 <Home />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <PrivateRoute>
+                <Onboarding />
               </PrivateRoute>
             }
           />
