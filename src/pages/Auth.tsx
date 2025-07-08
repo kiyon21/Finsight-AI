@@ -58,7 +58,7 @@ const Auth = () => {
 
       // add user to firestore
       try{
-        await addDoc(collection(db, 'users'), {
+        await addDoc(collection(db, 'users', user.uid), {
           uid: user.uid,
           email: email,
           hasCompletedOnboarding: false,
