@@ -1,7 +1,7 @@
 import { Spinner, Center, Box } from "@chakra-ui/react";
 import { useAuth } from "../context/AuthContext";
 import { Routes, Route } from "react-router-dom";
-import PrivateRoute from "../routes/PrivateRoute";
+import PrivateRoute from "./PrivateRoute";
 import Navbar from "../components/Navbar";
 import Home from "../pages/Home";
 import Auth from "../pages/Auth";

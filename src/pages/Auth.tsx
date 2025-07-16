@@ -58,12 +58,12 @@ const Auth = () => {
 
       // add user to firestore
       try{
-        await addDoc(collection(db, 'users', user.uid), {
+        await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           email: email,
           hasCompletedOnboarding: false,
           createdAt: new Date().toISOString(),
-        })
+        });
         // show toast message
         toast({
           title: 'Account Created!',
