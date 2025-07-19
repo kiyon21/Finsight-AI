@@ -20,7 +20,7 @@ const ProgressBar = ({current, total}: Props) => {
               }}
             />
           </div>
-          <p>{`Step ${current} of ${total}`}</p>
+          <p style={{fontWeight:'bold'}}>{`Step ${current} of ${total}`}</p>
         </div>
       );
 }

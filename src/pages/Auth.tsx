@@ -63,6 +63,7 @@ const Auth = () => {
           email: email,
           hasCompletedOnboarding: false,
           createdAt: new Date().toISOString(),
+          accessToken: ''
         });
         // show toast message
         toast({
