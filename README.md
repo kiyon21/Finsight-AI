@@ -1,54 +1,96 @@
-# React + TypeScript + Vite
+# FinSight AI – Personalized Financial Advisor Powered by AI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+FinSight AI is a smart, secure, and user-friendly web platform that acts like a financial advisor — powered entirely by AI. The goal is to help users make smarter money decisions using AI-powered analysis, summaries, and personalized guidance.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🌟 Key Features
 
-## Expanding the ESLint configuration
+- 📊 **Automatic Expense Classification**  
+  Analyzes transactions, receipts, and statements to categorize spending.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- 💬 **Natural Language Questions**  
+  Ask questions like _“Can I afford a vacation next month?”_ and get context-aware answers.
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+- 🧠 **Personalized Advice**  
+  Example: _“Cut Uber Eats by 20% to save $150/month.”_
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- 📝 **Monthly Reports**  
+  Get spending summaries, cash flow trends, and goal-tracking updates.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- 📷 **Document & Receipt Uploads**  
+  Upload PDFs or images of bank statements and receipts — AI extracts and analyzes content.
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+> Hugging Face AI capabilities will be integrated soon!
+
+---
+
+## 🚀 Real-World Problem Solved
+
+- Millions don’t have access to personal financial advisors.
+- Budgeting apps focus too much on charts, not action.
+- FinSight turns your **passive data** into **actionable financial insight**.
+
+---
+
+## 🧠 Upcoming Hugging Face AI Features
+
+| Task Type                | Purpose                                                                 |
+|--------------------------|-------------------------------------------------------------------------|
+| Document QA              | Extract insights from PDFs (e.g., paystubs, bank statements)            |
+| Image-to-Text (OCR)      | Read receipts and invoices                                              |
+| Text Classification      | Categorize spending into groceries, bills, entertainment, etc.         |
+| Sentence Similarity      | Match user queries to relevant financial categories                     |
+| Text Generation          | Generate human-like advice (e.g., spending tips)                        |
+| Summarization            | Create short financial summaries and progress reports                   |
+| Table QA                 | Answer questions like “Where did I spend the most last month?”         |
+| Text-to-Speech (Optional)| Read financial summaries aloud for accessibility                        |
+
+---
+
+## 🛠️ Tech Stack
+
+**Frontend**
+- React + TypeScript + Vite
+- Tailwind CSS
+
+**Backend**
+- Node.js (Express) 
+
+**Database**
+- Firebase Firestore: Users, Goals, Income Sources, 
+
+**Storage & APIs**
+- Plaid API: Link real bank accounts securely
+- OCR.space: For receipt image parsing
+- Hugging Face Transformers: Hosted or self-deployed AI models
+
+**Authentication & Security**
+- Firebase Auth or OAuth 2.0 (Plaid/Google)
+- End-to-end encryption of sensitive financial data
+
+## 🔒 Security
+
+- All user data is encrypted.
+- Financial connections use Plaid’s secure OAuth flows.
+- No third-party access to user data without consent.
+
+---
+
+## 📎 License
+
+MIT License. See `LICENSE` for more details.
+
+---
+
+## 👋 Contributing
+
+PRs and feature suggestions welcome! Open an issue or fork the repo.
+
+---
+
+## 📬 Contact
+
+Created with ❤️ by Kiyon Farokhi 
+Email: kiyonfarokhi@hotmail.com
+LinkedIn: www.linkedin.com/in/kiyonfarokhi
