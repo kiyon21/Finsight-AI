@@ -25,9 +25,8 @@ const Step2PlaidUpload = ({goNext, goBack}: StepsProps) => {
     useEffect(() => {
       async function fetch(){
 
-        const response = await axios.post("/create_link_token");
-        setLinkToken(await response.data.link_token);
-        console.log("response ", (await response).data);
+        const response = await axios.post('/link/token/create');
+        setLinkToken(await response.data);
 
       }
       async function fetchUserData(){      
@@ -40,9 +39,12 @@ const Step2PlaidUpload = ({goNext, goBack}: StepsProps) => {
         let accessToken = '';
         if(!querySnapshot.empty){
           const userData = querySnapshot.docs[0].data();
+          console.log(userData)
           accessToken = userData.accessToken;
         }
         if(accessToken != ''){
+          const test = await axios.post('/accounts/get', {access_token: accessToken});
+          console.log('auth data', test.data);
           setBankConnected(true);
         } else {
           setBankConnected(false);
@@ -58,7 +60,7 @@ const Step2PlaidUpload = ({goNext, goBack}: StepsProps) => {
       async function fetchData(){
         // retrieve acccessToken
         let accessToken = await axios.post('/exchange_public_token',{public_token: publicToken});
-        console.log('access token ', accessToken.data);
+        console.log('access token: ', accessToken.data.accessToken);
 
         // set current users bank account access token
         const auth = getAuth();
@@ -75,8 +77,7 @@ const Step2PlaidUpload = ({goNext, goBack}: StepsProps) => {
         } catch (err: any){
             console.log(err.message);
         }
-        // const auth = await axios.post('/auth', {access_token: accessToken.data.accessToken});
-        // console.log('auth data', auth.data);
+
       }
   
       fetchData();
