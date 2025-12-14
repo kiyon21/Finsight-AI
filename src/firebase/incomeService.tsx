@@ -1,9 +1,7 @@
-import { db } from "./firebase";
-import { collection, addDoc, doc, deleteDoc } from "firebase/firestore";
-
+import { incomeAPI } from "../services/api";
 
 export interface IncomeSourceData {
-    id: string;
+    id?: string;
     sourceName: string;
     type: string;
     amount: string;
@@ -18,23 +16,44 @@ export interface IncomeSourceData {
     notes: string;
     isPrimary: boolean;
   }
+
 export const addIncomeSource = async (uid: string, income: IncomeSourceData) => {
   try {
-    const incomeRef = collection(db, "users", uid, "income");
-    const docRef = await addDoc(incomeRef, income);
-    console.log("Income added with ID:", docRef.id);
+    const response = await incomeAPI.addIncomeSource(uid, income);
+    console.log("Income added with ID:", response.incomeId);
+    return response.incomeId;
   } catch (error) {
-    console.error("Error adding goal:", error);
+    console.error("Error adding income:", error);
+    throw error;
   }
 };
 
-export const deleteIncomeSource = async (uid: string, goalId: string) => {
+export const getIncomeSources = async (uid: string): Promise<IncomeSourceData[]> => {
   try {
-    const incomeRef = doc(db, "users", uid, "income", goalId);
-    await deleteDoc(incomeRef);
-    console.log("Income deleted with ID:", goalId);
+    const incomeSources = await incomeAPI.getIncomeSources(uid);
+    return incomeSources;
+  } catch (error) {
+    console.error('Error fetching income sources:', error);
+    return [];
+  }
+};
+
+export const deleteIncomeSource = async (uid: string, incomeId: string) => {
+  try {
+    await incomeAPI.deleteIncomeSource(uid, incomeId);
+    console.log("Income deleted with ID:", incomeId);
   } catch (error) {
     console.error("Error deleting Income:", error);
+    throw error;
+  }
+};
+
+export const updateIncomeSource = async (uid: string, incomeId: string, income: Partial<IncomeSourceData>) => {
+  try {
+    await incomeAPI.updateIncomeSource(uid, incomeId, income);
+    console.log("Income updated with ID:", incomeId);
+  } catch (error) {
+    console.error("Error updating income:", error);
     throw error;
   }
 };

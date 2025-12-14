@@ -16,16 +16,8 @@ import {
   IconButton,
 } from '@chakra-ui/react'
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons'
-import { auth, googleProvider } from '../firebase/firebase'
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  signInWithPopup
-} from "firebase/auth";
 import { useNavigate } from 'react-router-dom';
-import { doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
+import { authService } from '../services/auth.service';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true)
@@ -52,84 +44,118 @@ const Auth = () => {
         })
         return
       }
-      // create user with email and password
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
 
-      // add user to firestore
-      try{
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          email: email,
-          hasCompletedOnboarding: false,
-          createdAt: new Date().toISOString(),
-          accessToken: ''
-        });
-        // show toast message
+      // Validate password length
+      if (password.length < 6) {
         toast({
-          title: 'Account Created!',
-          description: 'Please log in to continue to Finsight AI',
-          status: 'info',
+          title: 'Password too short',
+          description: 'Password must be at least 6 characters',
+          status: 'error',
           duration: 3000,
           isClosable: true,
         })
-      } catch (err:any) {
-        console.log('error adding user to firestore');
-        console.error(err.message);
+        return
       }
 
-      // login user
-      await signInWithEmailAndPassword(auth, email, password);
+      // Create user via backend (handles Auth + Firestore + auto sign-in)
+      await authService.register(email, password);
+      
+      // show toast message
+      toast({
+        title: 'Account Created!',
+        description: 'Welcome to Finsight AI',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      })
+
       navigate('/onboarding');
     }
     catch (err:any) {
-      console.log('error creating user');
-      console.error(err.message)
-    }
+      console.error('Registration error:', err);
+      
+      // Handle specific error messages
+      let errorMessage = 'Unable to create account';
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
 
+      toast({
+        title: 'Registration Failed',
+        description: errorMessage,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement authentication logic
     try {
       // sign in with email and password
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const user = await authService.login(email, password);
+      
       // show toast message
       toast({
         title: 'Log In Successful!',
-        status: 'info',
+        status: 'success',
         duration: 3000,
         isClosable: true,
       })
-      const q = query(collection(db, 'users'), where('uid', '==', user.uid));
-      const querySnapshot = await getDocs(q);
-      let hasCompletedOnboarding = false;
-      if(!querySnapshot.empty){
-        const userData = querySnapshot.docs[0].data();
-        hasCompletedOnboarding = userData.hasCompletedOnboarding;
-      }
-      if(hasCompletedOnboarding){
-        navigate('/home');
+
+      // Get user data from backend
+      const userData = await authService.getUserData(user.uid);
+      
+      if(userData.hasCompletedOnboarding){
+        navigate('/dashboard');
       } else {
         navigate('/onboarding');
       }
     } catch (err:any) {
       console.log('error signing in');
       console.error(err.message);
+      toast({
+        title: 'Login Failed',
+        description: err.message || 'Invalid credentials',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
     }
   }
 
-  const handleGoogleSignIn = () => {
-    // TODO: Implement Google sign-in
+  const handleGoogleSignIn = async () => {
+    try {
+      const user = await authService.loginWithGoogle();
+      
+      toast({
+        title: 'Google Sign In Successful!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      })
+
+      // Get user data from backend
+      const userData = await authService.getUserData(user.uid);
+      
+      if(userData.hasCompletedOnboarding){
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding');
+      }
+    } catch (err:any) {
+      console.error('Google sign-in error:', err);
     toast({
-      title: 'Coming soon',
-      description: 'Google sign-in will be implemented soon!',
-      status: 'info',
+        title: 'Google Sign In Failed',
+        description: err.message || 'Unable to sign in with Google',
+        status: 'error',
       duration: 3000,
       isClosable: true,
     })
+    }
   }
 
   return (

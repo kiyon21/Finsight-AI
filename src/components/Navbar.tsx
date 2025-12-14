@@ -30,8 +30,11 @@ const Navbar = () => {
           <Link as={RouterLink} to="/dashboard" color="white" _hover={{ color: 'blue.300' }}>
             Dashboard
           </Link>
-          <Link as={RouterLink} to="/analysis" color="white" _hover={{ color: 'blue.300' }}>
-            Analysis
+          <Link as={RouterLink} to="/transactions" color="white" _hover={{ color: 'blue.300' }}>
+            Transactions
+          </Link>
+          <Link as={RouterLink} to="/updateInfo" color="white" _hover={{ color: 'blue.300' }}>
+            Update Info
           </Link>
           <Button as={RouterLink} to="/auth" colorScheme="blue" size="sm" onClick={currentUser ? handleLogout : () => navigate('/auth')}>
             {currentUser ? "Log Out" : "Sign In"}

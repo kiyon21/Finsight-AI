@@ -1,18 +1,12 @@
 import React from "react";
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { usePlaidLink } from "react-plaid-link";
 import { getAuth } from "firebase/auth";
-import { doc, updateDoc, query,collection, where,getDocs } from "firebase/firestore";
-import { db } from "../../firebase/firebase";
 import StepTemplate from "./StepTemplate";
 import type { StepsProps } from "./StepTemplate";
 import { Button, Alert, AlertDescription, Box, Stack, Text, AlertIcon, VStack } from "@chakra-ui/react";
 import { LinkIcon } from "@chakra-ui/icons";
-
-
-
-axios.defaults.baseURL = "http://localhost:8000"
+import { plaidAPI, authAPI } from "../../services/api";
 
 
 const Step2PlaidUpload = ({goNext, goBack}: StepsProps) => {
@@ -24,64 +18,58 @@ const Step2PlaidUpload = ({goNext, goBack}: StepsProps) => {
 
     useEffect(() => {
       async function fetch(){
-
-        const response = await axios.post('/link/token/create');
-        setLinkToken(await response.data);
-
+        const linkToken = await plaidAPI.createLinkToken();
+        setLinkToken(linkToken);
       }
+      
       async function fetchUserData(){      
         const auth = getAuth();
         const user = auth.currentUser;
         if (!user) return;
   
-        const q = query(collection(db, 'users'), where('uid', '==', user.uid));
-        const querySnapshot = await getDocs(q);
-        let accessToken = '';
-        if(!querySnapshot.empty){
-          const userData = querySnapshot.docs[0].data();
-          console.log(userData)
-          accessToken = userData.accessToken;
-        }
+        try {
+          const userData = await authAPI.getUserData(user.uid);
+          const accessToken = userData.accessToken || '';
+          
         if(accessToken != ''){
-          const test = await axios.post('/accounts/get', {access_token: accessToken});
-          console.log('auth data', test.data);
           setBankConnected(true);
         } else {
+            setBankConnected(false);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
           setBankConnected(false);
         }
       }
+      
       fetchUserData();
       if(!bankConnected) fetch();
     },[]);
 
     // runs after publicToken set
     useEffect(() => {
-
       async function fetchData(){
-        // retrieve acccessToken
-        let accessToken = await axios.post('/exchange_public_token',{public_token: publicToken});
-        console.log('access token: ', accessToken.data.accessToken);
+        if (!publicToken) return;
+        
+        // retrieve accessToken
+        const response = await plaidAPI.exchangePublicToken(publicToken);
+        console.log('access token: ', response.accessToken);
 
         // set current users bank account access token
         const auth = getAuth();
         const user = auth.currentUser;
         if (!user) return;
 
-        const userRef = doc(db, "users", user.uid);
         try {
-            await updateDoc(userRef, {
-            accessToken: accessToken.data.accessToken,
-          });
-
+          await authAPI.updatePlaidToken(user.uid, response.accessToken);
         setBankConnected(true);
         } catch (err: any){
-            console.log(err.message);
+          console.error('Error updating Plaid token:', err.message);
         }
-
       }
   
-      fetchData();
-    }, [publicToken]);
+      if (!bankConnected && publicToken) fetchData();
+    }, [publicToken, bankConnected]);
 
     const { open, ready } = usePlaidLink({
       token: linkToken,
@@ -115,6 +103,7 @@ const Step2PlaidUpload = ({goNext, goBack}: StepsProps) => {
               </Box>
             </Alert>
           ) : (
+            <Stack spacing={3}>
             <Button
               w="full"
               variant="outline"
@@ -126,6 +115,16 @@ const Step2PlaidUpload = ({goNext, goBack}: StepsProps) => {
             >
               {!ready ? "Connecting..." : "Connect with Plaid"}
             </Button>
+              <Button
+                w="full"
+                variant="ghost"
+                onClick={goNext}
+                fontSize={{ base: "sm", md: "md" }}
+                color="gray.600"
+              >
+                Skip for now
+              </Button>
+            </Stack>
           )}
         </VStack>
       </StepTemplate>

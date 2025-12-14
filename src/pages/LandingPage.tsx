@@ -1,11 +1,9 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { Box, Heading, Text, Container, VStack, Button } from '@chakra-ui/react';
-import {  useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
-import { doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
-
+import { authAPI } from '../services/api';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -17,15 +15,13 @@ const LandingPage = () => {
       const user = auth.currentUser;
       if (!user) return;
 
-      const q = query(collection(db, 'users'), where('uid', '==', user.uid));
-      const querySnapshot = await getDocs(q);
-      let hasCompletedOnboarding = false;
-      if(!querySnapshot.empty){
-        const userData = querySnapshot.docs[0].data();
-        hasCompletedOnboarding = userData.hasCompletedOnboarding;
-      }
-      if(hasCompletedOnboarding){
-        sethasCompletedOnboarding(true)
+      try {
+        const userData = await authAPI.getUserData(user.uid);
+        if(userData.hasCompletedOnboarding){
+          sethasCompletedOnboarding(true)
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
       }
     }
     fetchOnboarding();
@@ -49,7 +45,7 @@ const LandingPage = () => {
           Your intelligent financial companion for smarter investment decisions
         </Text>
         <Button size="lg" colorScheme="blue" px={8} onClick={()=>{
-          hasCompletedOnboarding ? navigate('/home') : navigate('/onboarding')
+          hasCompletedOnboarding ? navigate('/dashboard') : navigate('/onboarding')
         }}>
           Get Started
         </Button>

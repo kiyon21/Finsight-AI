@@ -4,28 +4,28 @@ FinSight AI is a smart, secure, and user-friendly web platform that acts like a 
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-- 📊 **Automatic Expense Classification**  
+- **Automatic Expense Classification**  
   Analyzes transactions, receipts, and statements to categorize spending.
 
-- 💬 **Natural Language Questions**  
-  Ask questions like _“Can I afford a vacation next month?”_ and get context-aware answers.
+- **Natural Language Questions**  
+  Ask questions like _"Can I afford a vacation next month?"_ and get context-aware answers.
 
-- 🧠 **Personalized Advice**  
-  Example: _“Cut Uber Eats by 20% to save $150/month.”_
+- **Personalized Advice**  
+  Example: _"Cut Uber Eats by 20% to save $150/month."_
 
-- 📝 **Monthly Reports**  
+- **Monthly Reports**  
   Get spending summaries, cash flow trends, and goal-tracking updates.
 
-- 📷 **Document & Receipt Uploads**  
+- **Document & Receipt Uploads**  
   Upload PDFs or images of bank statements and receipts — AI extracts and analyzes content.
 
 > Hugging Face AI capabilities will be integrated soon!
 
 ---
 
-## 🚀 Real-World Problem Solved
+## Real-World Problem Solved
 
 - Millions don’t have access to personal financial advisors.
 - Budgeting apps focus too much on charts, not action.
@@ -33,7 +33,7 @@ FinSight AI is a smart, secure, and user-friendly web platform that acts like a 
 
 ---
 
-## 🧠 Upcoming Hugging Face AI Features
+## Upcoming Hugging Face AI Features
 
 | Task Type                | Purpose                                                                 |
 |--------------------------|-------------------------------------------------------------------------|
@@ -48,7 +48,7 @@ FinSight AI is a smart, secure, and user-friendly web platform that acts like a 
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 **Frontend**
 - React + TypeScript + Vite
@@ -69,7 +69,7 @@ FinSight AI is a smart, secure, and user-friendly web platform that acts like a 
 - Firebase Auth or OAuth 2.0 (Plaid/Google)
 - End-to-end encryption of sensitive financial data
 
-## 🔒 Security
+## Security
 
 - All user data is encrypted.
 - Financial connections use Plaid’s secure OAuth flows.
@@ -77,20 +77,20 @@ FinSight AI is a smart, secure, and user-friendly web platform that acts like a 
 
 ---
 
-## 📎 License
+## License
 
 MIT License. See `LICENSE` for more details.
 
 ---
 
-## 👋 Contributing
+## Contributing
 
 PRs and feature suggestions welcome! Open an issue or fork the repo.
 
 ---
 
-## 📬 Contact
+## Contact
 
-Created with ❤️ by Kiyon Farokhi 
+Created by Kiyon Farokhi 
 Email: kiyonfarokhi@hotmail.com
 LinkedIn: www.linkedin.com/in/kiyonfarokhi

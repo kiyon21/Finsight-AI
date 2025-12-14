@@ -1,9 +1,12 @@
 import { Spinner, Center, Box } from "@chakra-ui/react";
 import { useAuth } from "../context/AuthContext";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import PrivateRoute from "./PrivateRoute";
 import Navbar from "../components/Navbar";
-import Home from "../pages/Home";
+import Dashboard from "../pages/Dashboard";
+import UploadTransactions from "../pages/UploadTransactions";
+import UpdateInfo from "../pages/UpdateInfo";
+import Transactions from "../pages/Transactions";
 import Auth from "../pages/Auth";
 import LandingPage from "../pages/LandingPage";
 import Onboarding from "../pages/Onboarding";
@@ -27,10 +30,18 @@ export default function AppRoutes() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<Auth />} />
           <Route
-            path="/home"
+            path="/dashboard"
             element={
               <PrivateRoute>
-                <Home />
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/upload-transactions"
+            element={
+              <PrivateRoute>
+                <UploadTransactions />
               </PrivateRoute>
             }
           />
@@ -42,6 +53,24 @@ export default function AppRoutes() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/updateInfo"
+            element={
+              <PrivateRoute>
+                <UpdateInfo />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/transactions"
+            element={
+              <PrivateRoute>
+                <Transactions />
+              </PrivateRoute>
+            }
+          />
+          {/* Redirect old /home route to /dashboard */}
+          <Route path="/home" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Box>
     </Box>

@@ -2,15 +2,15 @@ import React from "react";
 import type { StepsProps } from "../../pages/Onboarding";
 import StepTemplate from "./StepTemplate";
 import { getAuth } from "firebase/auth";
-import { db } from "../../firebase/firebase";
-import {doc, updateDoc} from "firebase/firestore";
+import { authAPI } from "../../services/api";
 import { useNavigate } from "react-router-dom";
-import { Box, Text, VStack, Icon, Alert, AlertIcon } from "@chakra-ui/react";
+import { Box, Text, VStack, Icon, Alert, AlertIcon, useToast } from "@chakra-ui/react";
 import { CheckCircleIcon } from "@chakra-ui/icons";
 
 const Step5Complete = ({goNext, goBack}: StepsProps) => {
 
     const navigate = useNavigate();
+    const toast = useToast();
 
     const handleFinish = async () => {
         
@@ -18,15 +18,19 @@ const Step5Complete = ({goNext, goBack}: StepsProps) => {
         const user = auth.currentUser;
         if (!user) return;
 
-        const userRef = doc(db, "users", user.uid);
         try {
-            await updateDoc(userRef, {
-            hasCompletedOnboarding:true,
-        });
+            await authAPI.completeOnboarding(user.uid);
+            navigate('/dashboard');
         } catch (err: any){
-            console.log(err.message);
+            console.error('Error completing onboarding:', err);
+            toast({
+              title: "Error completing onboarding",
+              description: "Please try again.",
+              status: "error",
+              duration: 3000,
+              isClosable: true,
+            });
         }
-        navigate('/home');        
     }
 
     return (

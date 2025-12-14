@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Step1Welcome from "../components/onboarding/Step1Welcome";
 import Step2PlaidUpload from "../components/onboarding/Step2PlaidUpload";
 import Step3Goals from "../components/onboarding/Step3Goals";
@@ -12,16 +12,22 @@ export type StepsProps = {
     goBack?: () => void; 
 }
 
-// onboarding steps
-const steps = [
-    Step1Welcome,
-    Step2PlaidUpload,
-    Step3Goals,
-    Step4Income,
-    Step5Complete,
-];
-
 const Onboarding = () => {
+    // Check if Plaid is enabled via environment variable
+    const isPlaidEnabled = import.meta.env.VITE_PLAID_ENABLED === 'true';
+
+    // Build steps array based on Plaid flag
+    const steps = useMemo(() => {
+        const allSteps = [
+            Step1Welcome,
+            ...(isPlaidEnabled ? [Step2PlaidUpload] : []), // Conditionally include Plaid step
+            Step3Goals,
+            Step4Income,
+            Step5Complete,
+        ];
+        return allSteps;
+    }, [isPlaidEnabled]);
+
     // useState for setting current step
     const [step, setStep] = useState(0);
 
@@ -34,7 +40,7 @@ const Onboarding = () => {
 
     return (
         <div>
-            <ProgressBar current={step + 1} total ={steps.length} />
+            <ProgressBar current={step + 1} total={steps.length} />
             <CurrentStep goNext={goNext} {...(step > 0 && {goBack})} />
         </div>
     );

@@ -24,10 +24,8 @@ import {
   IconButton,
 } from "@chakra-ui/react";
 import { getAuth } from "firebase/auth";
-import { addGoal, deleteGoal } from "../../firebase/goalService";
 import type { Goal as BaseGoal } from "../../firebase/goalService";
-import { collection, doc, getDocs } from "firebase/firestore";
-import { db } from "../../firebase/firebase";
+import { goalsAPI } from "../../services/api";
 import { AddIcon, DeleteIcon } from "@chakra-ui/icons";
 
 
@@ -88,13 +86,11 @@ const Step3Goals = ({ goNext, goBack }: StepsProps) => {
         return;
       }
       try {
-        const userId = user.uid;
-        const goalsRef = collection(doc(db, 'users', userId), 'goals');
-        const snapshot = await getDocs(goalsRef);
-        if (snapshot && !snapshot.empty) {
-          const goalsList: Goal[] = snapshot.docs.map(doc => ({
-            ...(doc.data() as Omit<Goal, 'goal_id'>),
-            goal_id: doc.id
+        const goals = await goalsAPI.getGoals(user.uid);
+        if (goals && goals.length > 0) {
+          const goalsList: Goal[] = goals.map(goal => ({
+            ...goal,
+            goal_id: goal.id || ''
           }));
           setUserGoals(goalsList);
           setUserSetGoal(true);
@@ -123,15 +119,17 @@ const Step3Goals = ({ goNext, goBack }: StepsProps) => {
     // TODO: Save goal data to context or parent state before proceeding
     try{
       if (user) {
-        const goalId = await addGoal(user.uid, goal);
-        // Add the new goal to the list with the actual Firestore ID
-        const newGoal = { ...goal, goal_id: goalId };
+        // Remove goal_id from the goal object before sending to backend
+        const { goal_id, ...goalData } = goal;
+        const response = await goalsAPI.addGoal(user.uid, goalData);
+        // Add the new goal to the list with the actual backend ID
+        const newGoal = { ...goalData, goal_id: response.goalId };
         setUserGoals(prev => [...prev, newGoal]);
       }
       // show toast message
       toast({
-        title: 'Goals Set!',
-        status: 'info',
+        title: 'Goal Added!',
+        status: 'success',
         duration: 3000,
         isClosable: true,
       })
@@ -185,7 +183,7 @@ const Step3Goals = ({ goNext, goBack }: StepsProps) => {
   const handleDeleteGoal = async (goalId: string) => {
     try {
       if (user) {
-        await deleteGoal(user.uid, goalId);
+        await goalsAPI.deleteGoal(user.uid, goalId);
         // Remove from local state
         setUserGoals(prev => prev.filter(g => g.goal_id !== goalId));
         toast({
@@ -310,6 +308,9 @@ const Step3Goals = ({ goNext, goBack }: StepsProps) => {
             </Select>
           </FormControl>
 
+          <Button type="submit" colorScheme="teal" w="full" mt={4}>
+            Save Goal
+          </Button>
         </Stack>
       </form>
     </StepTemplate>

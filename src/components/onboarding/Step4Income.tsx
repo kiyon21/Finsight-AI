@@ -29,10 +29,8 @@ import {
 } from "@chakra-ui/react";
 import { AddIcon, DeleteIcon, EditIcon } from "@chakra-ui/icons";
 import { getAuth } from "firebase/auth";
-import { addIncomeSource, deleteIncomeSource } from "../../firebase/incomeService";
 import type { IncomeSourceData } from "../../firebase/incomeService";
-import { collection, doc, getDocs } from "firebase/firestore";
-import { db } from "../../firebase/firebase";
+import { incomeAPI } from "../../services/api";
 
 const incomeTypes = [
   { value: "Salary", label: "Salary" },
@@ -109,18 +107,12 @@ const Step4Income = ({ goNext, goBack }: StepsProps) => {
         return;
       }
       try {
-        const userId = user.uid;
-        const goalsRef = collection(doc(db, 'users', userId), 'income');
-        const snapshot = await getDocs(goalsRef);
-        if (snapshot && !snapshot.empty) {
-          const goalsList: IncomeSourceData[] = snapshot.docs.map(doc => ({
-            ...(doc.data() as Omit<IncomeSourceData, 'income_id'>),
-            income_id: doc.id
-          }));
-          setIncomeSources(goalsList);
+        const incomeSources = await incomeAPI.getIncomeSources(user.uid);
+        if (incomeSources && incomeSources.length > 0) {
+          setIncomeSources(incomeSources);
         }
       } catch (error) {
-        console.error('error fetching Goals', error);
+        console.error('error fetching income sources', error);
       }
     }
     fetchIncomeSources();
@@ -139,7 +131,7 @@ const Step4Income = ({ goNext, goBack }: StepsProps) => {
     setCurrentIncomeSource((prev) => ({ ...prev, [name]: checked }));
   };
 
-  const handleAddIncomeSource = () => {
+  const handleAddIncomeSource = async () => {
     if (incomeSources.length >= 10) {
       toast({
         title: "Maximum income sources reached",
@@ -163,31 +155,45 @@ const Step4Income = ({ goNext, goBack }: StepsProps) => {
       return;
     }
 
-    const newIncomeSource = {
-      ...currentIncomeSource,
-      id: editingId || Date.now().toString(),
-    };
+    if (!user) return;
 
-    if (editingId) {
-      // Update existing
-      setIncomeSources(prev => prev.map(source => 
-        source.id === editingId ? newIncomeSource : source
-      ));
-      setEditingId(null);
-    } else {
-      // Add new
-      setIncomeSources(prev => [...prev, newIncomeSource]);
+    try {
+      if (editingId) {
+        // Update existing via backend
+        await incomeAPI.updateIncomeSource(user.uid, editingId, currentIncomeSource);
+        setIncomeSources(prev => prev.map(source => 
+          source.id === editingId ? { ...currentIncomeSource, id: editingId } : source
+        ));
+        setEditingId(null);
+      } else {
+        // Add new via backend
+        const response = await incomeAPI.addIncomeSource(user.uid, currentIncomeSource);
+        const newIncomeSource = {
+          ...currentIncomeSource,
+          id: response.incomeId,
+        };
+        setIncomeSources(prev => [...prev, newIncomeSource]);
+      }
+
+      setCurrentIncomeSource(emptyIncomeSource);
+      setIsAdding(false);
+
+      toast({
+        title: editingId ? "Income Source Updated!" : "Income Source Added!",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Error saving income source:", error);
+      toast({
+        title: "Error saving income source",
+        description: "Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
-
-    setCurrentIncomeSource(emptyIncomeSource);
-    setIsAdding(false);
-
-    toast({
-      title: editingId ? "Income Source Updated!" : "Income Source Added!",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
   };
 
   const handleEdit = (incomeSource: IncomeSourceData) => {
@@ -199,21 +205,21 @@ const Step4Income = ({ goNext, goBack }: StepsProps) => {
   const handleDelete = async (incomeId: string) => {
         try {
           if (user) {
-            await deleteIncomeSource(user.uid, incomeId);
+            await incomeAPI.deleteIncomeSource(user.uid, incomeId);
             // Remove from local state
             setIncomeSources(prev => prev.filter(source => source.id !== incomeId));
 
             toast({
-              title: "Goal Removed",
+              title: "Income Source Removed",
               status: "success",
               duration: 3000,
               isClosable: true,
             });
           }
         } catch (error) {
-          console.error("Error deleting goal:", error);
+          console.error("Error deleting income source:", error);
           toast({
-            title: "Error removing goal",
+            title: "Error removing income source",
             description: "Please try again.",
             status: "error",
             duration: 3000,
@@ -242,23 +248,8 @@ const Step4Income = ({ goNext, goBack }: StepsProps) => {
     }
 
 
-        // Save each income source to db
-        try{
-          if(!user) return;
-          incomeSources.forEach( async (incomeSource) => {
-            if (user) await addIncomeSource(user.uid,incomeSource);
-            // show toast message
-            toast({
-              title: 'Goals Set!',
-              status: 'info',
-              duration: 3000,
-              isClosable: true,
-            })
-          });
-        } catch (err:any) {
-          console.log('error adding goal to firestore');
-          console.error(err.message);
-        }
+        // Income sources are already saved when added individually
+        // Just navigate to next step
         goNext();
 
     // TODO: Save income sources data to Firebase or context

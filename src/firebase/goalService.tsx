@@ -1,7 +1,7 @@
-import { db } from "./firebase";
-import { collection, addDoc, doc, deleteDoc, getDocs } from "firebase/firestore";
+import { goalsAPI } from "../services/api";
 
 export interface Goal {
+    id?: string;
     goal_name: string,
     goal_type: string,
     goal_description: string,
@@ -14,41 +14,41 @@ export interface Goal {
 
 export const addGoal = async (uid: string, goal: Goal) => {
   try {
-    const goalRef = collection(db, "users", uid, "goals");
-    const docRef = await addDoc(goalRef, goal);
-    console.log("Goal added with ID:", docRef.id);
-    return docRef.id; // Return the document ID for local state management
+    const response = await goalsAPI.addGoal(uid, goal);
+    console.log("Goal added with ID:", response.goalId);
+    return response.goalId;
   } catch (error) {
     console.error("Error adding goal:", error);
     throw error;
   }
 };
 
-// export const getGoals = async (uid: string) => {
-//   try {
-//           const userId = uid;
-//           const goalsRef = collection(doc(db, 'users', userId), 'goals');
-//           const snapshot = await getDocs(goalsRef);
-//           if (snapshot && !snapshot.empty) {
-//             const goalsList: Goal[] = snapshot.docs.map(doc => ({
-//               ...(doc.data() as Omit<Goal, 'goal_id'>),
-//               goal_id: doc.id
-//             }));
-//             return goalsList;
-//           }
-//         } catch (error) {
-//           return []
-//           console.error('error fetching Goals', error);
-//         }
-// };
+export const getGoals = async (uid: string): Promise<Goal[]> => {
+  try {
+    const goals = await goalsAPI.getGoals(uid);
+    return goals;
+  } catch (error) {
+    console.error('Error fetching goals:', error);
+    return [];
+  }
+};
 
 export const deleteGoal = async (uid: string, goalId: string) => {
   try {
-    const goalRef = doc(db, "users", uid, "goals", goalId);
-    await deleteDoc(goalRef);
+    await goalsAPI.deleteGoal(uid, goalId);
     console.log("Goal deleted with ID:", goalId);
   } catch (error) {
     console.error("Error deleting goal:", error);
+    throw error;
+  }
+};
+
+export const updateGoal = async (uid: string, goalId: string, goal: Partial<Goal>) => {
+  try {
+    await goalsAPI.updateGoal(uid, goalId, goal);
+    console.log("Goal updated with ID:", goalId);
+  } catch (error) {
+    console.error("Error updating goal:", error);
     throw error;
   }
 };
