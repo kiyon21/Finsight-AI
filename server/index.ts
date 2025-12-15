@@ -14,6 +14,8 @@ import { createPlaidRoutes } from './routes/plaid.routes';
 import { createAuthRoutes } from './routes/auth.routes';
 import { createUserRoutes } from './routes/user.routes';
 import { createTransactionRoutes } from './routes/transaction.routes';
+import { createAIInsightRoutes } from './routes/ai-insight.routes';
+import { AIInsightController } from './controllers/ai-insight.controller';
 import { corsMiddleware } from './middleware/cors.middleware';
 import { errorHandler } from './middleware/error.middleware';
 
@@ -43,6 +45,8 @@ let webhookUrl: string;
     const transactionService = new TransactionService();
     const transactionController = new TransactionController(transactionService, plaidService);
 
+    const aiInsightController = new AIInsightController();
+
     // Apply middleware
     app.use(corsMiddleware);
     app.use(bodyParser.json());
@@ -52,6 +56,7 @@ let webhookUrl: string;
     app.use('/api/auth', createAuthRoutes(authController));
     app.use('/api/users', createUserRoutes(userController));
     app.use('/api/transactions', createTransactionRoutes(transactionController));
+    app.use('/api/users', createAIInsightRoutes(aiInsightController));
 
     // Error handling middleware (should be last)
     app.use(errorHandler);

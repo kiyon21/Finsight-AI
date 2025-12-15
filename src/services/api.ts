@@ -1,6 +1,10 @@
 import axios from 'axios';
+import { auth } from '../firebase/firebase';
 
+// Main API (Express server) - port 8000
 const API_BASE_URL = 'http://localhost:8000/api';
+// AI Server (Django) - port 8001
+const AI_API_BASE_URL = 'http://localhost:8001/api/ai';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -8,6 +12,32 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// AI Server API client (Django server on port 8001)
+export const aiApi = axios.create({
+  baseURL: AI_API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add Firebase ID token to requests
+const addAuthToken = async (config: any) => {
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+  }
+  return config;
+};
+
+// Add interceptor to both API clients
+api.interceptors.request.use(addAuthToken);
+aiApi.interceptors.request.use(addAuthToken);
 
 // Auth API
 export const authAPI = {
@@ -197,6 +227,113 @@ export const transactionsAPI = {
     if (limit) params.append('limit', limit.toString());
     
     const response = await api.get(`/transactions/${uid}/jobs?${params.toString()}`);
+    return response.data;
+  },
+};
+
+// AI API (Django server)
+export const aiAPI = {
+  getQuickInsight: async (userId: string) => {
+    // Fetch data from main API first
+    const [goals, income, transactions] = await Promise.all([
+      goalsAPI.getGoals(userId),
+      incomeAPI.getIncomeSources(userId),
+      transactionsAPI.getTransactions(userId, 100)
+    ]);
+    
+    // Pass data to AI server
+    const response = await aiApi.post('/quick-insight/', {
+      user_id: userId,
+      goals,
+      income,
+      transactions
+    });
+    
+    // Save to Firebase
+    try {
+      await api.post(`/users/${userId}/insights`, {
+        user_id: userId,
+        analysis_type: 'quick_insight',
+        summary: response.data.summary,
+        ai_insights: response.data.ai_insights,
+        recommendations: response.data.recommendations,
+        spending_by_category: response.data.spending_by_category,
+      });
+    } catch (error) {
+      console.error('Error saving quick insight to Firebase:', error);
+      // Don't fail the request if saving fails
+    }
+    
+    return response.data;
+  },
+
+  getFinancialInsights: async (userId: string, analysisType: string, additionalContext?: any) => {
+    // Fetch data from main API first
+    const [goals, income, transactions] = await Promise.all([
+      goalsAPI.getGoals(userId),
+      incomeAPI.getIncomeSources(userId),
+      transactionsAPI.getTransactions(userId, 100)
+    ]);
+    
+    // Pass data to AI server
+    const response = await aiApi.post('/insights/', {
+      user_id: userId,
+      analysis_type: analysisType,
+      goals,
+      income,
+      transactions,
+      additional_context: additionalContext || {},
+    });
+    
+    // Save to Firebase
+    try {
+      await api.post(`/users/${userId}/insights`, {
+        user_id: userId,
+        analysis_type: analysisType,
+        insights: response.data.insights,
+        recommendations: response.data.recommendations,
+        model_used: response.data.model_used,
+        analysis_id: response.data.analysis_id,
+      });
+    } catch (error) {
+      console.error(`Error saving ${analysisType} to Firebase:`, error);
+      // Don't fail the request if saving fails
+    }
+    
+    return response.data;
+  },
+
+  getAnalysisHistory: async (userId: string, limit?: number) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    
+    const response = await aiApi.get(`/history/${userId}/?${params.toString()}`);
+    return response.data;
+  },
+
+  getAnalysisDetail: async (analysisId: string) => {
+    const response = await aiApi.get(`/analysis/${analysisId}`);
+    return response.data;
+  },
+
+  // Save insight to Firebase
+  saveInsight: async (userId: string, insight: any) => {
+    const response = await api.post(`/users/${userId}/insights`, insight);
+    return response.data;
+  },
+
+  // Get insights from Firebase by type
+  getInsights: async (userId: string, analysisType: string, limit?: number) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    
+    const response = await api.get(`/users/${userId}/insights/${analysisType}?${params.toString()}`);
+    return response.data;
+  },
+
+  // Get latest insight from Firebase by type
+  getLatestInsight: async (userId: string, analysisType: string) => {
+    const response = await api.get(`/users/${userId}/insights/${analysisType}/latest`);
     return response.data;
   },
 };

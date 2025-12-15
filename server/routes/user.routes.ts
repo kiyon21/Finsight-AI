@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
+import { authenticateToken } from '../middleware/auth.middleware';
 
 export function createUserRoutes(userController: UserController): Router {
   const router = Router();
+
+  // Apply authentication middleware to all routes
+  router.use(authenticateToken);
 
   // Goal routes
   router.post('/:uid/goals', (req, res) => userController.addGoal(req, res));

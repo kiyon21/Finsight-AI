@@ -10,6 +10,7 @@ import Transactions from "../pages/Transactions";
 import Auth from "../pages/Auth";
 import LandingPage from "../pages/LandingPage";
 import Onboarding from "../pages/Onboarding";
+import AIInsights from "../pages/AIInsights";
 
 export default function AppRoutes() {
   const { loading } = useAuth();
@@ -66,6 +67,14 @@ export default function AppRoutes() {
             element={
               <PrivateRoute>
                 <Transactions />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/ai-insights"
+            element={
+              <PrivateRoute>
+                <AIInsights />
               </PrivateRoute>
             }
           />

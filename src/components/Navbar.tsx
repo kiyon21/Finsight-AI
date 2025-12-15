@@ -24,11 +24,11 @@ const Navbar = () => {
           </Link>
         </Heading>
         <HStack spacing={8}>
-          <Link as={RouterLink} to="/" color="white" _hover={{ color: 'blue.300' }}>
-            Home
-          </Link>
           <Link as={RouterLink} to="/dashboard" color="white" _hover={{ color: 'blue.300' }}>
             Dashboard
+          </Link>
+          <Link as={RouterLink} to="/ai-insights" color="white" _hover={{ color: 'blue.300' }}>
+            AI Insights
           </Link>
           <Link as={RouterLink} to="/transactions" color="white" _hover={{ color: 'blue.300' }}>
             Transactions

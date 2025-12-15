@@ -1,4 +1,5 @@
 import { Transaction } from './transaction.service';
+import { TransactionCategorizationService } from './transaction-categorization.service';
 
 export interface CSVTransaction {
   date: string;
@@ -11,6 +12,12 @@ export interface CSVTransaction {
 }
 
 export class CSVParserService {
+  private categorizationService: TransactionCategorizationService;
+
+  constructor() {
+    this.categorizationService = new TransactionCategorizationService();
+  }
+
   // Parse TD Bank format CSV
   parseTDBank(csvContent: string): CSVTransaction[] {
     const lines = csvContent.trim().split('\n');
@@ -103,10 +110,10 @@ export class CSVParserService {
         date: csvTx.date,
         name: csvTx.description,
         merchantName: this.extractMerchantName(csvTx.description),
-        category: this.categorizeTransaction(csvTx.description),
+        category: this.categorizationService.categorizeTransaction(csvTx.description),
         pending: false,
         paymentChannel: csvTx.type === 'debit' ? 'other' : 'other',
-        personalFinanceCategory: this.detectCategory(csvTx.description),
+        personalFinanceCategory: this.categorizationService.detectCategory(csvTx.description),
         balance: csvTx.balance,
       };
     });
@@ -167,64 +174,6 @@ export class CSVParserService {
       .replace(/\s+GST$/, '')
       .replace(/\s+EPAY$/, '')
       .trim();
-  }
-
-  // Simple categorization based on merchant names
-  private categorizeTransaction(description: string): string[] {
-    const desc = description.toUpperCase();
-
-    if (desc.includes('STARBUCKS') || desc.includes('COFFEE')) return ['Food and Drink', 'Coffee'];
-    if (desc.includes('UBER') || desc.includes('LYFT')) return ['Transportation'];
-    if (desc.includes('SHELL') || desc.includes('PETRO') || desc.includes('GAS')) return ['Transportation', 'Gas'];
-    if (desc.includes('GOODLIFE') || desc.includes('GYM') || desc.includes('FITNESS')) return ['Recreation', 'Fitness'];
-    if (desc.includes('VISA') || desc.includes('PAYMENT')) return ['Payment', 'Credit Card'];
-    if (desc.includes('E-TRANSFER') || desc.includes('E-TFR')) return ['Transfer'];
-    if (desc.includes('ATM')) return ['Bank Fees', 'ATM'];
-    if (desc.includes('WALMART') || desc.includes('TARGET') || desc.includes('DOLLARAMA')) return ['Shopping', 'General Merchandise'];
-    if (desc.includes('PIZZA') || desc.includes('DOMINO') || desc.includes('RESTAURANT') || desc.includes('MCDONALD')) return ['Food and Drink', 'Restaurants'];
-    if (desc.includes('CANNA') || desc.includes('CANNABIS')) return ['Shopping', 'Cannabis'];
-    if (desc.includes('FOOD BASICS') || desc.includes('ZEHRS') || desc.includes('GROCERY')) return ['Food and Drink', 'Groceries'];
-    if (desc.includes('GST')) return ['Income', 'Tax Refund'];
-    
-    return ['Other'];
-  }
-
-  // Detect personal finance category
-  private detectCategory(description: string): { primary: string; detailed: string } {
-    const desc = description.toUpperCase();
-
-    if (desc.includes('STARBUCKS') || desc.includes('COFFEE')) {
-      return { primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_COFFEE' };
-    }
-    if (desc.includes('PIZZA') || desc.includes('DOMINO') || desc.includes('RESTAURANT') || desc.includes('MCDONALD') || desc.includes('CHICK-FIL-A')) {
-      return { primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_RESTAURANTS' };
-    }
-    if (desc.includes('FOOD BASICS') || desc.includes('ZEHRS') || desc.includes('GROCERY')) {
-      return { primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_GROCERIES' };
-    }
-    if (desc.includes('UBER') || desc.includes('LYFT')) {
-      return { primary: 'TRANSPORTATION', detailed: 'TRANSPORTATION_TAXIS_AND_RIDE_SHARES' };
-    }
-    if (desc.includes('SHELL') || desc.includes('PETRO') || desc.includes('GAS')) {
-      return { primary: 'TRANSPORTATION', detailed: 'TRANSPORTATION_GAS' };
-    }
-    if (desc.includes('GOODLIFE') || desc.includes('GYM') || desc.includes('FITNESS')) {
-      return { primary: 'RECREATION', detailed: 'RECREATION_GYMS_AND_FITNESS_CENTERS' };
-    }
-    if (desc.includes('WALMART') || desc.includes('DOLLARAMA')) {
-      return { primary: 'GENERAL_MERCHANDISE', detailed: 'GENERAL_MERCHANDISE_SUPERSTORES' };
-    }
-    if (desc.includes('E-TRANSFER') || desc.includes('E-TFR')) {
-      return { primary: 'TRANSFER', detailed: 'TRANSFER_OUT' };
-    }
-    if (desc.includes('VISA') || desc.includes('TD VISA')) {
-      return { primary: 'LOAN_PAYMENTS', detailed: 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT' };
-    }
-    if (desc.includes('GST')) {
-      return { primary: 'INCOME', detailed: 'INCOME_TAX_REFUND' };
-    }
-
-    return { primary: 'GENERAL_SERVICES', detailed: 'GENERAL_SERVICES_OTHER' };
   }
 }
 

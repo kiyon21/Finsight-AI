@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { TransactionController } from '../controllers/transaction.controller';
+import { authenticateToken } from '../middleware/auth.middleware';
 import multer from 'multer';
 
 // Configure multer for file uploads (memory storage)
@@ -19,6 +20,9 @@ const upload = multer({
 
 export function createTransactionRoutes(transactionController: TransactionController): Router {
   const router = Router();
+
+  // Apply authentication middleware to all routes
+  router.use(authenticateToken);
 
   // Transaction CRUD
   router.post('/:uid/transactions', (req, res) => transactionController.addTransaction(req, res));

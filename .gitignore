@@ -23,3 +23,26 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.cursor
+package-lock.json
+fastapi-server/venv311
+express-server/package.json
+package.json
+package-lock.json
+
+venv311
+.venv311
+
+# Django AI Server
+ai_server/__pycache__/
+ai_server/*.py[cod]
+ai_server/*$py.class
+ai_server/db.sqlite3
+ai_server/db.sqlite3-journal
+ai_server/.env
+ai_server/venv/
+ai_server/ENV/
+ai_server/env/
+ai_server/.venv
+ai_server/*.log
+ai_server/local_settings.py

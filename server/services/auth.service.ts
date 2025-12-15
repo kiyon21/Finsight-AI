@@ -103,6 +103,28 @@ export class AuthService {
         lastUploadedAt: null,
       });
 
+      // Initialize AI insight collections with metadata documents
+      const aiInsightCollections = [
+        'quickInsights',
+        'spendingAnalyses',
+        'goalRecommendations',
+        'budgetSuggestions',
+        'savingsAdvices',
+      ];
+
+      for (const collectionName of aiInsightCollections) {
+        const insightMetaRef = adminDb
+          .collection('users')
+          .doc(uid)
+          .collection(collectionName)
+          .doc('_metadata');
+        batch.set(insightMetaRef, {
+          initialized: true,
+          createdAt: new Date().toISOString(),
+          totalInsights: 0,
+        });
+      }
+
       await batch.commit();
       console.log(`Initialized collections for user ${uid}`);
     } catch (error: any) {
