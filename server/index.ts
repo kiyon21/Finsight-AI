@@ -16,8 +16,14 @@ import { createUserRoutes } from './routes/user.routes';
 import { createTransactionRoutes } from './routes/transaction.routes';
 import { createAIInsightRoutes } from './routes/ai-insight.routes';
 import { AIInsightController } from './controllers/ai-insight.controller';
+import { PageCacheService } from './services/page-cache.service';
+import { PageCacheController } from './controllers/page-cache.controller';
+import { createPageCacheRoutes } from './routes/page-cache.routes';
+import { QueueService } from './services/queue.service';
+import { AIInsightService } from './services/ai-insight.service';
 import { corsMiddleware } from './middleware/cors.middleware';
 import { errorHandler } from './middleware/error.middleware';
+import { redisConnection } from './config/redis.config';
 
 dotenv.config();
 
@@ -29,6 +35,9 @@ let webhookUrl: string;
 // Initialize server with ngrok tunnel
 (async () => {
   try {
+    // Initialize Redis connection
+    await redisConnection.connect();
+    
     webhookUrl = await ngrok.connect(PORT);
     console.log(`[Ngrok] Tunnel running: ${webhookUrl}`);
 
@@ -45,7 +54,20 @@ let webhookUrl: string;
     const transactionService = new TransactionService();
     const transactionController = new TransactionController(transactionService, plaidService);
 
+    const aiInsightService = new AIInsightService();
     const aiInsightController = new AIInsightController();
+
+    // Initialize page cache service and controller
+    const queueService = new QueueService();
+    await queueService.initialize();
+    
+    const pageCacheService = new PageCacheService(
+      transactionService,
+      userService,
+      aiInsightService,
+      authService
+    );
+    const pageCacheController = new PageCacheController(pageCacheService, queueService);
 
     // Apply middleware
     app.use(corsMiddleware);
@@ -57,6 +79,7 @@ let webhookUrl: string;
     app.use('/api/users', createUserRoutes(userController));
     app.use('/api/transactions', createTransactionRoutes(transactionController));
     app.use('/api/users', createAIInsightRoutes(aiInsightController));
+    app.use('/api/pages', createPageCacheRoutes(pageCacheController));
 
     // Error handling middleware (should be last)
     app.use(errorHandler);

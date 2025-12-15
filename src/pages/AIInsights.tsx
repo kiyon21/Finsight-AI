@@ -26,7 +26,7 @@ import {
   ViewIcon,
 } from "@chakra-ui/icons";
 import { getAuth } from "firebase/auth";
-import { aiAPI } from "../services/api";
+import { aiAPI, pageCacheAPI } from "../services/api";
 
 // Helper function to parse and format insights
 const formatInsights = (insights: any): string => {
@@ -317,48 +317,29 @@ const AIInsights = () => {
   const cardBg = useColorModeValue("white", "gray.800");
   const border = useColorModeValue("gray.200", "gray.700");
 
-  // Load latest insights from Firebase when user is available
+  // Load latest insights from cache when user is available
   useEffect(() => {
     const loadLatestInsights = async () => {
       if (!user) return;
 
-      // Load latest quick insight
       try {
-        const quickInsightData = await aiAPI.getLatestInsight(user.uid, 'quick_insight');
-        if (quickInsightData) {
-          setQuickInsight(quickInsightData);
+        // Load cached AI insights data
+        const insightsData = await pageCacheAPI.getAIInsightsData(user.uid);
+        
+        if (insightsData.quickInsight) {
+          setQuickInsight(insightsData.quickInsight);
+      }
+        if (insightsData.spendingAnalysis) {
+          setSpendingAnalysis(insightsData.spendingAnalysis);
+      }
+        if (insightsData.savingsAdvice) {
+          setSavingsAdvice(insightsData.savingsAdvice);
+        }
+        if (insightsData.analysisHistory) {
+          setAnalysisHistory(insightsData.analysisHistory);
         }
       } catch (error) {
-        console.error('Error loading latest quick insight:', error);
-      }
-
-      // Load latest spending analysis
-      try {
-        const spendingData = await aiAPI.getLatestInsight(user.uid, 'spending_analysis');
-        if (spendingData) {
-          setSpendingAnalysis(spendingData);
-        }
-      } catch (error) {
-        console.error('Error loading latest spending analysis:', error);
-      }
-
-      // Load latest savings advice
-      try {
-        const savingsData = await aiAPI.getLatestInsight(user.uid, 'savings_advice');
-        if (savingsData) {
-          setSavingsAdvice(savingsData);
-        }
-      } catch (error) {
-        console.error('Error loading latest savings advice:', error);
-      }
-
-      // Load analysis history
-      setHistoryLoading(true);
-      try {
-        const result = await aiAPI.getAnalysisHistory(user.uid, 5);
-        setAnalysisHistory(result || []);
-      } catch (error) {
-        console.error('Error fetching analysis history:', error);
+        console.error('Error loading AI insights:', error);
       } finally {
         setHistoryLoading(false);
       }
@@ -374,11 +355,10 @@ const AIInsights = () => {
     try {
       const result = await aiAPI.getQuickInsight(user.uid);
       setQuickInsight(result);
-      // Reload latest from Firebase
-      const latest = await aiAPI.getLatestInsight(user.uid, 'quick_insight');
-      if (latest) setQuickInsight(latest);
-      const historyResult = await aiAPI.getAnalysisHistory(user.uid, 5);
-      setAnalysisHistory(historyResult || []);
+      // Reload cached data (bypass cache to get fresh data)
+      const insightsData = await pageCacheAPI.getAIInsightsData(user.uid, true);
+      if (insightsData.quickInsight) setQuickInsight(insightsData.quickInsight);
+      if (insightsData.analysisHistory) setAnalysisHistory(insightsData.analysisHistory);
     } catch (error) {
       console.error('Error fetching quick insight:', error);
     } finally {
@@ -392,11 +372,10 @@ const AIInsights = () => {
     try {
       const result = await aiAPI.getFinancialInsights(user.uid, 'spending_analysis');
       setSpendingAnalysis(result);
-      // Reload latest from Firebase
-      const latest = await aiAPI.getLatestInsight(user.uid, 'spending_analysis');
-      if (latest) setSpendingAnalysis(latest);
-      const historyResult = await aiAPI.getAnalysisHistory(user.uid, 5);
-      setAnalysisHistory(historyResult || []);
+      // Reload cached data (bypass cache to get fresh data)
+      const insightsData = await pageCacheAPI.getAIInsightsData(user.uid, true);
+      if (insightsData.spendingAnalysis) setSpendingAnalysis(insightsData.spendingAnalysis);
+      if (insightsData.analysisHistory) setAnalysisHistory(insightsData.analysisHistory);
     } catch (error) {
       console.error('Error fetching spending analysis:', error);
     } finally {
@@ -411,11 +390,10 @@ const AIInsights = () => {
     try {
       const result = await aiAPI.getFinancialInsights(user.uid, 'savings_advice');
       setSavingsAdvice(result);
-      // Reload latest from Firebase
-      const latest = await aiAPI.getLatestInsight(user.uid, 'savings_advice');
-      if (latest) setSavingsAdvice(latest);
-      const historyResult = await aiAPI.getAnalysisHistory(user.uid, 5);
-      setAnalysisHistory(historyResult || []);
+      // Reload cached data (bypass cache to get fresh data)
+      const insightsData = await pageCacheAPI.getAIInsightsData(user.uid, true);
+      if (insightsData.savingsAdvice) setSavingsAdvice(insightsData.savingsAdvice);
+      if (insightsData.analysisHistory) setAnalysisHistory(insightsData.analysisHistory);
     } catch (error) {
       console.error('Error fetching savings advice:', error);
     } finally {
@@ -427,8 +405,11 @@ const AIInsights = () => {
     if (!user) return;
     setHistoryLoading(true);
     try {
-      const result = await aiAPI.getAnalysisHistory(user.uid, 5);
-      setAnalysisHistory(result || []);
+      // Reload cached data (bypass cache to get fresh data)
+      const insightsData = await pageCacheAPI.getAIInsightsData(user.uid, true);
+      if (insightsData.analysisHistory) {
+        setAnalysisHistory(insightsData.analysisHistory);
+      }
     } catch (error) {
       console.error('Error fetching analysis history:', error);
     } finally {

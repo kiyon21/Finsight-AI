@@ -1,5 +1,6 @@
 import { adminDb } from '../config/firebase.config';
 import { Timestamp } from 'firebase-admin/firestore';
+import { cacheService, CacheService } from './cache.service';
 
 export interface AIInsight {
   id?: string;
@@ -50,6 +51,9 @@ export class AIInsightService {
         .collection(collectionName)
         .add(insightData);
 
+      // Invalidate cache for this insight type
+      await cacheService.deletePattern(`ai-insights:${uid}:${insight.analysis_type}*`);
+
       console.log(`AI insight saved for user ${uid} in collection ${collectionName}: ${insightRef.id}`);
       return insightRef.id;
     } catch (error: any) {
@@ -61,6 +65,13 @@ export class AIInsightService {
   // Get insights for a user by type
   async getInsights(uid: string, analysisType: string, limit?: number): Promise<AIInsight[]> {
     try {
+      // Check cache first
+      const cacheKey = CacheService.getAIInsightsKey(uid, analysisType, limit);
+      const cached = await cacheService.get<AIInsight[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       const collectionName = this.getCollectionName(analysisType);
       let query = adminDb
         .collection('users')
@@ -74,10 +85,15 @@ export class AIInsightService {
 
       const snapshot = await query.get();
 
-      return snapshot.docs.map(doc => ({
+      const insights = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       })) as AIInsight[];
+
+      // Cache the result (1 hour)
+      await cacheService.set(cacheKey, insights);
+
+      return insights;
     } catch (error: any) {
       console.error(`Error getting AI insights for user ${uid}:`, error);
       throw new Error(`Failed to get AI insights: ${error.message}`);
@@ -87,8 +103,22 @@ export class AIInsightService {
   // Get latest insight for a user by type
   async getLatestInsight(uid: string, analysisType: string): Promise<AIInsight | null> {
     try {
+      // Check cache first
+      const cacheKey = CacheService.getLatestAIInsightKey(uid, analysisType);
+      const cached = await cacheService.get<AIInsight>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       const insights = await this.getInsights(uid, analysisType, 1);
-      return insights.length > 0 ? insights[0] : null;
+      const latest = insights.length > 0 ? insights[0] : null;
+
+      // Cache the result (1 hour)
+      if (latest) {
+        await cacheService.set(cacheKey, latest);
+      }
+
+      return latest;
     } catch (error: any) {
       console.error(`Error getting latest AI insight for user ${uid}:`, error);
       return null;
@@ -105,6 +135,9 @@ export class AIInsightService {
         .collection(collectionName)
         .doc(insightId)
         .delete();
+      
+      // Invalidate cache for this insight type
+      await cacheService.deletePattern(`ai-insights:${uid}:${analysisType}*`);
     } catch (error: any) {
       throw new Error(`Failed to delete AI insight: ${error.message}`);
     }

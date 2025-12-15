@@ -57,9 +57,10 @@ const UploadTransactions = () => {
             duration: 5000,
           });
           
+          // Invalidate cache by adding timestamp query param to force refresh
           // Navigate to dashboard after successful processing
           setTimeout(() => {
-            navigate('/dashboard');
+            navigate(`/dashboard?refresh=${Date.now()}`);
           }, 1500);
         } else if (status.status === 'failed') {
           clearInterval(poll);

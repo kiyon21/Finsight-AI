@@ -148,11 +148,12 @@ export const transactionsAPI = {
     return response.data;
   },
 
-  getTransactions: async (uid: string, limit?: number, startDate?: string, endDate?: string) => {
+  getTransactions: async (uid: string, limit?: number, startDate?: string, endDate?: string, noCache?: boolean) => {
     const params = new URLSearchParams();
     if (limit) params.append('limit', limit.toString());
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    if (noCache) params.append('noCache', 'true');
     
     const response = await api.get(`/transactions/${uid}/transactions?${params.toString()}`);
     return response.data;
@@ -334,6 +335,40 @@ export const aiAPI = {
   // Get latest insight from Firebase by type
   getLatestInsight: async (userId: string, analysisType: string) => {
     const response = await api.get(`/users/${userId}/insights/${analysisType}/latest`);
+    return response.data;
+  },
+};
+
+// Page Cache API (cached endpoints)
+export const pageCacheAPI = {
+  // Get cached dashboard data
+  getDashboardData: async (uid: string, noCache?: boolean) => {
+    const params = new URLSearchParams();
+    if (noCache) params.append('noCache', 'true');
+    const response = await api.get(`/pages/dashboard/${uid}?${params.toString()}`);
+    return response.data;
+  },
+
+  // Get cached transactions data
+  getTransactionsData: async (uid: string, limit?: number, noCache?: boolean) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (noCache) params.append('noCache', 'true');
+    const response = await api.get(`/pages/transactions/${uid}?${params.toString()}`);
+    return response.data;
+  },
+
+  // Get cached AI insights data
+  getAIInsightsData: async (uid: string, noCache?: boolean) => {
+    const params = new URLSearchParams();
+    if (noCache) params.append('noCache', 'true');
+    const response = await api.get(`/pages/ai-insights/${uid}?${params.toString()}`);
+    return response.data;
+  },
+
+  // Invalidate page cache
+  invalidatePageCache: async (uid: string) => {
+    const response = await api.post(`/pages/invalidate/${uid}`);
     return response.data;
   },
 };

@@ -51,17 +51,19 @@ export class TransactionController {
   async getTransactions(req: Request, res: Response) {
     try {
       const { uid } = req.params;
-      const { limit, startDate, endDate } = req.query;
+      const { limit, startDate, endDate, noCache } = req.query;
 
       if (!uid) {
         return res.status(400).json({ error: 'User ID is required' });
       }
 
+      const bypassCache = noCache === 'true' || noCache === '1';
       const transactions = await this.transactionService.getTransactions(
         uid,
         limit ? parseInt(limit as string) : undefined,
         startDate as string,
-        endDate as string
+        endDate as string,
+        bypassCache
       );
       res.json(transactions);
     } catch (error: any) {

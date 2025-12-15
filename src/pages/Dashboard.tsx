@@ -24,7 +24,7 @@ import {
   ArrowUpIcon,
 } from "@chakra-ui/icons";
 import { getAuth } from "firebase/auth";
-import { transactionsAPI, goalsAPI, incomeAPI, authAPI } from "../services/api";
+import { pageCacheAPI } from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
@@ -48,56 +48,32 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [user]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (bypassCache: boolean = false) => {
     if (!user) return;
 
     try {
       setLoading(true);
 
-      // Fetch all data in parallel
-      const [txns, userData, goalsData, incomeData] = await Promise.all([
-        transactionsAPI.getTransactions(user.uid, 100), // Get last 100 transactions
-        authAPI.getUserData(user.uid),
-        goalsAPI.getGoals(user.uid),
-        incomeAPI.getIncomeSources(user.uid),
-      ]);
+      // Check if we should bypass cache (from refresh param)
+      const urlParams = new URLSearchParams(window.location.search);
+      const shouldBypassCache = bypassCache || urlParams.get('refresh') !== null;
 
-      setTransactions(txns);
-      setUserData(userData);
-      setGoals(goalsData);
-      setIncomeSources(incomeData);
+      // Fetch cached dashboard data
+      const dashboardData = await pageCacheAPI.getDashboardData(user.uid, shouldBypassCache);
+
+      setTransactions(dashboardData.transactions);
+      setUserData(dashboardData.userData);
+      setGoals(dashboardData.goals);
+      setIncomeSources(dashboardData.incomeSources);
+      setSpendingSummary(dashboardData.spendingSummary);
+      setTotalSpending(dashboardData.totalSpending);
+      setTotalEarnings(dashboardData.totalEarnings);
 
       // If no transactions, redirect to upload page
-      if (!txns || txns.length === 0) {
+      if (!dashboardData.transactions || dashboardData.transactions.length === 0) {
         navigate('/upload-transactions');
         return;
       }
-
-      // Calculate spending summary and total
-      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-      
-      // Get spending summary for all time (for top categories)
-      const allTimeSummary = await transactionsAPI.getSpendingSummary(user.uid);
-      
-      // Get current month's total spending
-      const currentMonthTotal = await transactionsAPI.getTotalSpending(
-        user.uid, 
-        `${currentMonth}-01`, 
-        `${currentMonth}-31`
-      );
-
-      // Calculate this month's earnings from transactions
-      const currentMonthTransactions = txns.filter(t => 
-        t.date.startsWith(currentMonth)
-      );
-      const monthlyEarnings = currentMonthTransactions.reduce((sum, t) => {
-        const isIncome = t.isExpense !== undefined ? !t.isExpense : t.amount <= 0;
-        return sum + (isIncome && t.amount > 0 ? t.amount : 0);
-      }, 0);
-
-      setSpendingSummary(allTimeSummary);
-      setTotalSpending(currentMonthTotal.total || 0);
-      setTotalEarnings(monthlyEarnings);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -119,11 +95,13 @@ const Dashboard = () => {
     return sum + amount;
   }, 0);
 
-  // Use balance from user data (updated from CSV uploads)
-  const balance = userData?.balance || 0;
+  // Get balance from most recent transaction that has a balance field
+  // Transactions are already sorted by date descending (most recent first)
+  const mostRecentTransactionWithBalance = transactions.find(t => t.balance !== undefined && t.balance !== null);
+  const balance = mostRecentTransactionWithBalance?.balance ?? userData?.balance ?? 0;
   
-  // Get most recent balance update date from user data
-  const balanceUpdatedDate = userData?.balanceUpdated;
+  // Get most recent balance update date from transaction or user data
+  const balanceUpdatedDate = mostRecentTransactionWithBalance?.date ?? userData?.balanceUpdated;
   const formattedDate = balanceUpdatedDate 
     ? (() => {
         // Parse date as local time to avoid timezone issues

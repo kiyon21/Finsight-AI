@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { adminAuth, adminDb } from '../config/firebase.config';
+import { cacheService, CacheService } from './cache.service';
 
 export interface UserData {
   uid: string;
@@ -164,13 +165,25 @@ export class AuthService {
 
   async getUserData(uid: string): Promise<UserData | null> {
     try {
+      // Check cache first
+      const cacheKey = CacheService.getUserDataKey(uid);
+      const cached = await cacheService.get<UserData>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       const userDoc = await adminDb.collection('users').doc(uid).get();
       
       if (!userDoc.exists) {
         return null;
       }
 
-      return userDoc.data() as UserData;
+      const userData = userDoc.data() as UserData;
+
+      // Cache the result (1 hour)
+      await cacheService.set(cacheKey, userData);
+
+      return userData;
     } catch (error: any) {
       throw new Error(`Failed to get user data: ${error.message}`);
     }
@@ -179,6 +192,10 @@ export class AuthService {
   async updateUser(uid: string, data: Partial<UserData>): Promise<void> {
     try {
       await adminDb.collection('users').doc(uid).update(data);
+      
+      // Invalidate cache
+      await cacheService.delete(CacheService.getUserDataKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
     } catch (error: any) {
       throw new Error(`Failed to update user: ${error.message}`);
     }
@@ -209,6 +226,10 @@ export class AuthService {
       await adminDb.collection('users').doc(uid).update({
         accessToken: accessToken,
       });
+      
+      // Invalidate cache
+      await cacheService.delete(CacheService.getUserDataKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
     } catch (error: any) {
       throw new Error(`Failed to update Plaid token: ${error.message}`);
     }
@@ -219,6 +240,10 @@ export class AuthService {
       await adminDb.collection('users').doc(uid).update({
         hasCompletedOnboarding: true,
       });
+      
+      // Invalidate cache
+      await cacheService.delete(CacheService.getUserDataKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
     } catch (error: any) {
       throw new Error(`Failed to complete onboarding: ${error.message}`);
     }
@@ -230,6 +255,10 @@ export class AuthService {
         balance: balance,
         balanceUpdated: transactionDate,
       });
+      
+      // Invalidate cache
+      await cacheService.delete(CacheService.getUserDataKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
     } catch (error: any) {
       throw new Error(`Failed to update user balance: ${error.message}`);
     }

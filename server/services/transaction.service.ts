@@ -1,5 +1,6 @@
 import { adminDb } from '../config/firebase.config';
 import { Timestamp } from 'firebase-admin/firestore';
+import { cacheService, CacheService } from './cache.service';
 
 export interface Transaction {
   id?: string;
@@ -49,6 +50,9 @@ export class TransactionService {
         .collection('plaidTransactions')
         .add(transactionData);
       
+      // Invalidate cache
+      await cacheService.invalidateUserCache(uid);
+      
       return docRef.id;
     } catch (error: any) {
       throw new Error(`Failed to add Plaid transaction: ${error.message}`);
@@ -69,6 +73,9 @@ export class TransactionService {
         .doc(uid)
         .collection('uploadedTransactions')
         .add(transactionData);
+      
+      // Invalidate cache
+      await cacheService.invalidateUserCache(uid);
       
       return docRef.id;
     } catch (error: any) {
@@ -112,6 +119,9 @@ export class TransactionService {
       }
 
       await batch.commit();
+
+      // Invalidate cache
+      await cacheService.invalidateUserCache(uid);
 
       return {
         added,
@@ -174,6 +184,9 @@ export class TransactionService {
 
       await batch.commit();
 
+      // Invalidate cache
+      await cacheService.invalidateUserCache(uid);
+
       return {
         added,
         modified,
@@ -190,8 +203,19 @@ export class TransactionService {
   }
 
   // Get all transactions for a user (combines both Plaid and uploaded)
-  async getTransactions(uid: string, limit?: number, startDate?: string, endDate?: string): Promise<Transaction[]> {
+  async getTransactions(uid: string, limit?: number, startDate?: string, endDate?: string, bypassCache: boolean = false): Promise<Transaction[]> {
     try {
+      // Generate cache key (always needed for caching later)
+      const cacheKey = CacheService.getTransactionsKey(uid, limit, startDate, endDate);
+      
+      // Check cache first (unless bypassing)
+      if (!bypassCache) {
+        const cached = await cacheService.get<Transaction[]>(cacheKey);
+        if (cached && cached.length > 0) {
+          return cached;
+        }
+      }
+
       const plaidTransactions = await this.getPlaidTransactions(uid, undefined, startDate, endDate);
       const uploadedTransactions = await this.getUploadedTransactions(uid, undefined, startDate, endDate);
 
@@ -200,7 +224,15 @@ export class TransactionService {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       // Apply limit if specified
-      return limit ? allTransactions.slice(0, limit) : allTransactions;
+      const result = limit ? allTransactions.slice(0, limit) : allTransactions;
+
+      // Only cache non-empty results to avoid caching "no transactions" state
+      // This ensures that after CSV uploads, we always check Firebase for new data
+      if (result.length > 0) {
+        await cacheService.set(cacheKey, result, 1800);
+      }
+
+      return result;
     } catch (error: any) {
       throw new Error(`Failed to get transactions: ${error.message}`);
     }
@@ -339,6 +371,13 @@ export class TransactionService {
   // Get spending summary by category
   async getSpendingSummary(uid: string, startDate?: string, endDate?: string): Promise<Record<string, number>> {
     try {
+      // Check cache first
+      const cacheKey = CacheService.getSpendingSummaryKey(uid, startDate, endDate);
+      const cached = await cacheService.get<Record<string, number>>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       const transactions = await this.getTransactions(uid, undefined, startDate, endDate);
       
       const summary: Record<string, number> = {};
@@ -356,6 +395,9 @@ export class TransactionService {
           summary[category] = (summary[category] || 0) + transaction.amount;
         }
       });
+
+      // Cache the result (30 minutes)
+      await cacheService.set(cacheKey, summary, 1800);
 
       return summary;
     } catch (error: any) {
@@ -375,9 +417,16 @@ export class TransactionService {
   // Get total spending for a period
   async getTotalSpending(uid: string, startDate?: string, endDate?: string): Promise<number> {
     try {
+      // Check cache first
+      const cacheKey = CacheService.getTotalSpendingKey(uid, startDate, endDate);
+      const cached = await cacheService.get<number>(cacheKey);
+      if (cached !== null) {
+        return cached;
+      }
+
       const transactions = await this.getTransactions(uid, undefined, startDate, endDate);
       
-      return transactions.reduce((total, transaction) => {
+      const total = transactions.reduce((total, transaction) => {
         // For CSV uploads, check isExpense flag; for Plaid, check if amount is positive
         const isExpense = transaction.isExpense !== undefined 
           ? transaction.isExpense 
@@ -385,6 +434,11 @@ export class TransactionService {
         
         return total + (isExpense && transaction.amount > 0 ? transaction.amount : 0);
       }, 0);
+
+      // Cache the result (30 minutes)
+      await cacheService.set(cacheKey, total, 1800);
+
+      return total;
     } catch (error: any) {
       throw new Error(`Failed to get total spending: ${error.message}`);
     }
@@ -399,6 +453,9 @@ export class TransactionService {
         .collection('transactions')
         .doc(transactionId)
         .delete();
+      
+      // Invalidate cache
+      await cacheService.invalidateUserCache(uid);
     } catch (error: any) {
       throw new Error(`Failed to delete transaction: ${error.message}`);
     }
@@ -419,6 +476,9 @@ export class TransactionService {
       });
 
       await batch.commit();
+      
+      // Invalidate cache
+      await cacheService.invalidateUserCache(uid);
     } catch (error: any) {
       throw new Error(`Failed to delete all transactions: ${error.message}`);
     }
@@ -436,6 +496,9 @@ export class TransactionService {
           ...updates,
           updatedAt: new Date().toISOString(),
         });
+      
+      // Invalidate cache
+      await cacheService.invalidateUserCache(uid);
     } catch (error: any) {
       throw new Error(`Failed to update transaction: ${error.message}`);
     }

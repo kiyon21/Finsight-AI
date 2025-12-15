@@ -1,4 +1,5 @@
 import { adminDb } from '../config/firebase.config';
+import { cacheService, CacheService } from './cache.service';
 
 export interface Goal {
   id?: string;
@@ -42,6 +43,12 @@ export class UserService {
         .collection('goals')
         .add(goalData);
       
+      // Invalidate cache
+      await cacheService.delete(CacheService.getGoalsKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
+      // Also invalidate page cache patterns
+      await cacheService.deletePattern(`page:*:${uid}*`);
+      
       console.log(`Goal added successfully for user ${uid}: ${goalRef.id}`);
       return goalRef.id;
     } catch (error: any) {
@@ -52,6 +59,13 @@ export class UserService {
 
   async getGoals(uid: string): Promise<Goal[]> {
     try {
+      // Check cache first
+      const cacheKey = CacheService.getGoalsKey(uid);
+      const cached = await cacheService.get<Goal[]>(cacheKey);
+      if (cached && cached.length > 0) {
+        return cached;
+      }
+
       const goalsSnapshot = await adminDb
         .collection('users')
         .doc(uid)
@@ -59,12 +73,20 @@ export class UserService {
         .get();
 
       // Filter out metadata document
-      return goalsSnapshot.docs
+      const goals = goalsSnapshot.docs
         .filter(doc => doc.id !== '_metadata')
         .map(doc => ({
           id: doc.id,
           ...doc.data(),
         })) as Goal[];
+
+      // Only cache non-empty results to avoid caching "no goals" state
+      // This ensures that after adding goals, we always check Firebase for new data
+      if (goals.length > 0) {
+      await cacheService.set(cacheKey, goals);
+      }
+
+      return goals;
     } catch (error: any) {
       throw new Error(`Failed to get goals: ${error.message}`);
     }
@@ -78,6 +100,12 @@ export class UserService {
         .collection('goals')
         .doc(goalId)
         .delete();
+      
+      // Invalidate cache
+      await cacheService.delete(CacheService.getGoalsKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
+      // Also invalidate page cache patterns
+      await cacheService.deletePattern(`page:*:${uid}*`);
     } catch (error: any) {
       throw new Error(`Failed to delete goal: ${error.message}`);
     }
@@ -91,6 +119,12 @@ export class UserService {
         .collection('goals')
         .doc(goalId)
         .update(goal);
+      
+      // Invalidate cache
+      await cacheService.delete(CacheService.getGoalsKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
+      // Also invalidate page cache patterns
+      await cacheService.deletePattern(`page:*:${uid}*`);
     } catch (error: any) {
       throw new Error(`Failed to update goal: ${error.message}`);
     }
@@ -108,6 +142,12 @@ export class UserService {
         .collection('income')
         .add(incomeData);
       
+      // Invalidate cache
+      await cacheService.delete(CacheService.getIncomeKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
+      // Also invalidate page cache patterns
+      await cacheService.deletePattern(`page:*:${uid}*`);
+      
       console.log(`Income source added successfully for user ${uid}: ${incomeRef.id}`);
       return incomeRef.id;
     } catch (error: any) {
@@ -118,6 +158,13 @@ export class UserService {
 
   async getIncomeSources(uid: string): Promise<IncomeSource[]> {
     try {
+      // Check cache first
+      const cacheKey = CacheService.getIncomeKey(uid);
+      const cached = await cacheService.get<IncomeSource[]>(cacheKey);
+      if (cached && cached.length > 0) {
+        return cached;
+      }
+
       const incomeSnapshot = await adminDb
         .collection('users')
         .doc(uid)
@@ -125,12 +172,20 @@ export class UserService {
         .get();
 
       // Filter out metadata document
-      return incomeSnapshot.docs
+      const incomeSources = incomeSnapshot.docs
         .filter(doc => doc.id !== '_metadata')
         .map(doc => ({
           id: doc.id,
           ...doc.data(),
         })) as IncomeSource[];
+
+      // Only cache non-empty results to avoid caching "no income sources" state
+      // This ensures that after adding income sources, we always check Firebase for new data
+      if (incomeSources.length > 0) {
+      await cacheService.set(cacheKey, incomeSources);
+      }
+
+      return incomeSources;
     } catch (error: any) {
       throw new Error(`Failed to get income sources: ${error.message}`);
     }
@@ -144,6 +199,12 @@ export class UserService {
         .collection('income')
         .doc(incomeId)
         .delete();
+      
+      // Invalidate cache
+      await cacheService.delete(CacheService.getIncomeKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
+      // Also invalidate page cache patterns
+      await cacheService.deletePattern(`page:*:${uid}*`);
     } catch (error: any) {
       throw new Error(`Failed to delete income source: ${error.message}`);
     }
@@ -157,6 +218,12 @@ export class UserService {
         .collection('income')
         .doc(incomeId)
         .update(income);
+      
+      // Invalidate cache
+      await cacheService.delete(CacheService.getIncomeKey(uid));
+      await cacheService.delete(CacheService.getDashboardKey(uid));
+      // Also invalidate page cache patterns
+      await cacheService.deletePattern(`page:*:${uid}*`);
     } catch (error: any) {
       throw new Error(`Failed to update income source: ${error.message}`);
     }

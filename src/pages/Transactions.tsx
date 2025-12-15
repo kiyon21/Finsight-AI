@@ -27,7 +27,7 @@ import {
   Input,
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
-import { transactionsAPI } from "../services/api";
+import { pageCacheAPI } from "../services/api";
 import { getAuth } from "firebase/auth";
 
 const Transactions = () => {
@@ -56,13 +56,10 @@ const Transactions = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const data = await transactionsAPI.getTransactions(user.uid, 500); // Get last 500 transactions
-      // Sort by date, most recent first
-      const sortedData = data.sort((a: any, b: any) => {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      });
-      setTransactions(sortedData);
-      setFilteredTransactions(sortedData);
+      const data = await pageCacheAPI.getTransactionsData(user.uid, 500);
+      // Data is already sorted by date, most recent first
+      setTransactions(data.transactions);
+      setFilteredTransactions(data.transactions);
     } catch (err) {
       console.error("Error fetching transactions:", err);
       toast({
